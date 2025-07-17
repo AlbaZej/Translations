@@ -68,7 +68,7 @@ def translate_dataframe(df, source_col, target_col, from_lang, to_lang):
 
 st.title("Aplikacion për Përkthimin e Pyetësorëve")
 
-uploaded_file = st.file_uploader("Ngarko skedarin Excel", type=["xlsx"])
+uploaded_file = st.file_uploader("Ngarko Excel-in", type=["xlsx"])
 
 if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
