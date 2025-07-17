@@ -4,11 +4,16 @@ import streamlit as st
 from io import BytesIO
 import re
 
+AZURE_TRANSLATOR_KEY = st.secrets["AZURE_TRANSLATOR_KEY"]
+AZURE_TRANSLATOR_ENDPOINT = st.secrets["AZURE_TRANSLATOR_ENDPOINT"]
+AZURE_REGION = st.secrets["AZURE_REGION"]
+
+
 LANGUAGE_OPTIONS_UI = {
-    "Shqipe": "sq",
-    "Angleze": "en",
-    "Serbe": "sr",
-    "Maqedonase": "mk"
+    "Gjuha Shqipe": "sq",
+    "Gjuha Angleze": "en",
+    "Gjuha Serbe": "sr",
+    "Gjuha Maqedonase": "mk"
 }
 
 def adjust_question_code(text, from_lang, to_lang):
