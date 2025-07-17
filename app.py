@@ -86,19 +86,19 @@ if uploaded_file:
     if not available_sheets:
         st.warning("Nuk ka faqe (sheet) të tjera për përkthim.")
     else:
-        selected_sheet = st.selectbox("Hapi 1: Zgjidh faqen (sheet) që dëshiron të përkthesh", available_sheets, index=available_sheets.index(st.session_state.selected_sheet) if st.session_state.selected_sheet in available_sheets else 0, key=f"sheet_select_{len(st.session_state.used_sheets)}")
+        selected_sheet = st.selectbox("Zgjidh një faqe për përkthim", available_sheets, index=available_sheets.index(st.session_state.selected_sheet) if st.session_state.selected_sheet in available_sheets else 0, key=f"sheet_select_{len(st.session_state.used_sheets)}")
         st.session_state.selected_sheet = selected_sheet
         df = st.session_state.translated_sheets[selected_sheet]
         st.write("Pamje paraprake e faqes së zgjedhur:", df.head())
 
         columns = df.columns.tolist()
-        source_col = st.selectbox("Hapi 2: Zgjidh kolonën që përmban tekstet që dëshiron të përkthesh", columns, key=f"{selected_sheet}_source")
-        from_lang_label = st.selectbox("Hapi 3: Zgjidh gjuhën e tekstit ekzistues", list(LANGUAGE_OPTIONS_UI.keys()), key=f"{selected_sheet}_from")
+        source_col = st.selectbox("Zgjidh kolonën nga e cila dëshiron të përkthesh", columns, key=f"{selected_sheet}_source")
+        from_lang_label = st.selectbox("Zgjidh gjuhën e tekstit ekzistues", list(LANGUAGE_OPTIONS_UI.keys()), key=f"{selected_sheet}_from")
         from_lang = LANGUAGE_OPTIONS_UI[from_lang_label]
-        multiple_targets = st.multiselect("Hapi 4: Zgjidh kolonat ku dëshiron të vendoset përkthimi", columns, key=f"{selected_sheet}_multitarget")
+        multiple_targets = st.multiselect("Zgjidh kolonat ku dëshiron të vendoset përkthimi", columns, key=f"{selected_sheet}_multitarget")
         target_languages = []
         for target_col in multiple_targets:
-            lang_label = st.selectbox(f"Hapi 5: Zgjidh gjuhën për kolonën e përkthimit: {target_col}", list(LANGUAGE_OPTIONS_UI.keys()), key=f"{selected_sheet}_{target_col}_lang")
+            lang_label = st.selectbox(f"Zgjidh gjuhën për kolonën: {target_col}", list(LANGUAGE_OPTIONS_UI.keys()), key=f"{selected_sheet}_{target_col}_lang")
             target_languages.append((target_col, LANGUAGE_OPTIONS_UI[lang_label]))
 
         if st.button(f"Fillo Përkthimin për {selected_sheet}", key=f"start_translation_{selected_sheet}"):
