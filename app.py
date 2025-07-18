@@ -50,7 +50,6 @@ def translate_text(text, from_lang, to_lang):
     response = requests.post(url, headers=headers, json=body)
 
     if response.status_code != 200:
-        print(f"Error: {response.status_code}, {response.text}")
         return text
 
     result = response.json()
@@ -58,8 +57,7 @@ def translate_text(text, from_lang, to_lang):
     try:
         translated_text = result[0]["translations"][0]["text"]
         return code + translated_text
-    except (KeyError, IndexError, TypeError) as e:
-        print(f"Translation failed for: {text} → Response: {result}")
+    except (KeyError, IndexError, TypeError):
         return text
 
 def translate_dataframe(df, source_col, target_col, from_lang, to_lang):
@@ -77,60 +75,53 @@ if uploaded_file:
 
     if "translated_sheets" not in st.session_state:
         st.session_state.translated_sheets = {sheet: df.copy() for sheet, df in all_sheets.items()}
-    if "used_sheets" not in st.session_state:
-        st.session_state.used_sheets = []
-    if "selected_sheet" not in st.session_state:
-        st.session_state.selected_sheet = sheet_names[0]
 
-    available_sheets = [sheet for sheet in sheet_names if sheet not in st.session_state.used_sheets]
-    if not available_sheets:
-        st.warning("Nuk ka faqe (sheet) të tjera për përkthim.")
-    else:
-        selected_sheet = st.selectbox("Zgjidh një faqe për përkthim", available_sheets, index=available_sheets.index(st.session_state.selected_sheet) if st.session_state.selected_sheet in available_sheets else 0, key=f"sheet_select_{len(st.session_state.used_sheets)}")
-        st.session_state.selected_sheet = selected_sheet
+    if "translation_blocks" not in st.session_state:
+        st.session_state.translation_blocks = [0]
+
+    for block_id in st.session_state.translation_blocks:
+        st.markdown(f"---\n### Blloku {block_id + 1}")
+
+        selected_sheet = st.selectbox(
+            f"Zgjidh një faqe për përkthim (Blloku {block_id + 1})",
+            sheet_names,
+            key=f"sheet_select_{block_id}"
+        )
         df = st.session_state.translated_sheets[selected_sheet]
-        st.write("Pamje paraprake e faqes së zgjedhur:", df.head())
+        st.write(f"Pamje paraprake për {selected_sheet} (Blloku {block_id + 1}):", df.head())
 
         columns = df.columns.tolist()
-        source_col = st.selectbox("Zgjidh kolonën nga e cila dëshiron të përkthesh", columns, key=f"{selected_sheet}_source")
-        from_lang_label = st.selectbox("Zgjidh gjuhën e tekstit ekzistues", list(LANGUAGE_OPTIONS_UI.keys()), key=f"{selected_sheet}_from")
+        source_col = st.selectbox(f"Kolona burimore (Blloku {block_id + 1})", columns, key=f"source_col_{block_id}")
+        from_lang_label = st.selectbox(f"Gjuha burimore (Blloku {block_id + 1})", list(LANGUAGE_OPTIONS_UI.keys()), key=f"from_lang_{block_id}")
         from_lang = LANGUAGE_OPTIONS_UI[from_lang_label]
-        multiple_targets = st.multiselect("Zgjidh kolonat ku dëshiron të vendoset përkthimi", columns, key=f"{selected_sheet}_multitarget")
+        multiple_targets = st.multiselect(f"Kolonat ku dëshiron të përkthehet (Blloku {block_id + 1})", columns, key=f"multi_target_{block_id}")
+
         target_languages = []
         for target_col in multiple_targets:
-            lang_label = st.selectbox(f"Zgjidh gjuhën për kolonën: {target_col}", list(LANGUAGE_OPTIONS_UI.keys()), key=f"{selected_sheet}_{target_col}_lang")
+            lang_label = st.selectbox(f"Gjuha për kolonën: {target_col} (Blloku {block_id + 1})", list(LANGUAGE_OPTIONS_UI.keys()), key=f"{target_col}_lang_{block_id}")
             target_languages.append((target_col, LANGUAGE_OPTIONS_UI[lang_label]))
 
-        if st.button(f"Fillo Përkthimin për {selected_sheet}", key=f"start_translation_{selected_sheet}"):
+        if st.button(f"Fillo Përkthimin për {selected_sheet} (Blloku {block_id + 1})", key=f"translate_btn_{block_id}"):
             with st.spinner("Duke përkthyer... Ju lutemi prisni"):
                 for target_col, to_lang in target_languages:
                     df = translate_dataframe(df, source_col, target_col, from_lang=from_lang, to_lang=to_lang)
+
             st.session_state.translated_sheets[selected_sheet] = df.copy()
-            if selected_sheet not in st.session_state.used_sheets:
-                st.session_state.used_sheets.append(selected_sheet)
-            st.write("Pamje pas përkthimit:", df.head())
+            st.success(f"Përkthimi për {selected_sheet} u krye me sukses në Bllokun {block_id + 1}!")
+            st.write(df.head())
 
-        if len([sheet for sheet in sheet_names if sheet not in st.session_state.used_sheets]) > 0:
-            continue_translation = st.checkbox("Dëshiron të përkthesh edhe një faqe tjetër?", key=f"continue_checkbox_{selected_sheet}")
-            if not continue_translation:
-                output = BytesIO()
-                with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                    for sheet in sheet_names:
-                        st.session_state.translated_sheets.get(sheet, all_sheets[sheet]).to_excel(writer, sheet_name=sheet, index=False)
+        if block_id == len(st.session_state.translation_blocks) - 1:
+            add_block = st.button("Shto bllok përkthimi të ri", key=f"add_block_{block_id}")
+            if add_block:
+                st.session_state.translation_blocks.append(len(st.session_state.translation_blocks))
 
-                st.download_button(
-                    label="Shkarko Excel-in me të gjitha përkthimet",
-                    data=output.getvalue(),
-                    file_name=uploaded_file.name
-                )
-        else:
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                for sheet in sheet_names:
-                    st.session_state.translated_sheets.get(sheet, all_sheets[sheet]).to_excel(writer, sheet_name=sheet, index=False)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        for sheet in sheet_names:
+            st.session_state.translated_sheets.get(sheet, all_sheets[sheet]).to_excel(writer, sheet_name=sheet, index=False)
 
-            st.download_button(
-                label="Shkarko Excel-in me të gjitha përkthimet",
-                data=output.getvalue(),
-                file_name=uploaded_file.name
-            )
+    st.download_button(
+        label="Shkarko Excel-in me të gjitha përkthimet",
+        data=output.getvalue(),
+        file_name=uploaded_file.name
+    )
